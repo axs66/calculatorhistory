@@ -24,10 +24,12 @@ jobs:
 
       - name: Setup Theos environment (官方方式)
         run: |
-          if [ -d "theos/sdks" ]; then sudo rm -rf theos/sdks; fi
-          if [ -d "theos" ]; then sudo rm -rf theos; fi
-          
+          sudo rm -rf theos || true
+          sudo rm -rf theos/sdks || true
+          sleep 1
+          mkdir -p theos
           git clone --depth=1 https://github.com/theos/theos.git theos
+          rm -rf theos/sdks   # 再删一次，确保 sdks 是空的
           git clone --depth=1 https://github.com/theos/sdks.git theos/sdks
           echo "THEOS=$PWD/theos" >> $GITHUB_ENV
 
