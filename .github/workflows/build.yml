@@ -38,7 +38,7 @@ jobs:
       - name: Clone Cephei repo (官方公开库)
         run: |
           rm -rf Cephei
-          git clone --depth=1 https://github.com/hbang/libcephei.git Cephei
+          git clone --depth=1 https://github.com/opa334/Cephei.git Cephei
           
       - name: Build Cephei static libraries only
         run: |
