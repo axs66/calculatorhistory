@@ -50,7 +50,6 @@ jobs:
           # 复制静态库到 lib 目录供主项目链接
           mkdir -p lib
           cp .theos/obj/debug/arm64/libCephei.a lib/ || true
-          cp .theos/obj/debug/arm64/libCepheiPrefs.a lib/ || true
           cp .theos/obj/debug/arm64/libCepheiSpringBoard.a lib/ || true
 
       - name: Clean previous packages
