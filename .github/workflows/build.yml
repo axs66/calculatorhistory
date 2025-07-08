@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/build.yml'
+      - 'control'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Setup Theos environment
+        uses: axs66/theos-action@main
+
+      - name: Clone Cephei repo
+        run: |
+          rm -rf Cephei
+          git clone --depth=1 https://github.com/hbang/libcephei.git Cephei
+
+      - name: Build Cephei static libraries only
+        run: |
+          cd Cephei
+          make clean
+          make LIBRARIES=CepheiPrefs
+
+          # 复制静态库到 lib 目录供主项目链接
+          mkdir -p lib
+          cp .theos/obj/debug/arm64/libCepheiPrefs.a lib/ || true
+          cp .theos/obj/debug/arm64/libCephei.a lib/ || true
+          cp .theos/obj/debug/arm64/libCepheiSpringBoard.a lib/ || true
+
+      - name: Clean previous packages
+        run: rm -f ${{ github.workspace }}/packages/*.deb
+
+      - name: Build tweak and bundle packages
+        run: |
+          make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+
+      - name: List generated DEBs
+        run: ls -lh ${{ github.workspace }}/packages
+
+      - name: Create GitHub Release
+        if: github.event_name == 'push'
+        run: |
+          VERSION=$(date +v%Y%m%d%H%M)
+          gh release create $VERSION ${{ github.workspace }}/packages/*.deb --title "calculatorhistory $VERSION" --notes "自动构建 .deb 安装包"
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
+
+      - name: Upload DEB to workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: calculatorhistory
+          path: ${{ github.workspace }}/packages/*.deb
