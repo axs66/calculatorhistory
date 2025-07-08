@@ -24,7 +24,9 @@ jobs:
 
       - name: Setup Theos environment (官方方式)
         run: |
-          rm -rf theos
+          rm -rf theos || true
+          rm -rf theos/sdks || true
+          mkdir -p theos          
           git clone --depth=1 https://github.com/theos/theos.git theos
           git clone --depth=1 https://github.com/theos/sdks.git theos/sdks
           echo "THEOS=$PWD/theos" >> $GITHUB_ENV
