@@ -13,11 +13,11 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout code without credentials
+      - name: Checkout code with credentials
         uses: actions/checkout@v3
         with:
           submodules: true
-          persist-credentials: false
+          persist-credentials: true  # 保持默认，确保能用 PAT
 
       - name: Install dependencies
         run: |
@@ -30,25 +30,26 @@ jobs:
           sleep 1
           mkdir -p theos
           git clone --depth=1 https://github.com/theos/theos.git theos
-          rm -rf theos/sdks   # 再删一次，确保 sdks 是空的
+          rm -rf theos/sdks
           git clone --depth=1 https://github.com/theos/sdks.git theos/sdks
           echo "THEOS=$PWD/theos" >> $GITHUB_ENV
           export THEOS="$PWD/theos"
           ./theos/bin/update-theos
 
-      - name: Clone Cephei repo (官方公开库)
+      - name: Clone Cephei repo (私有需认证)
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
         run: |
-          rm -rf Cephei          
-          git clone --depth=1 https://github.com/hbang/libcephei.git Cephei
-          
+          rm -rf Cephei
+          git clone --depth=1 https://${GITHUB_TOKEN}@github.com/opa334/Cephei.git Cephei
+
       - name: Build Cephei static libraries only
         run: |
           cd Cephei
           make clean
-          make LIBRARIES=Cephei   # ✅ 替换这一行，避免 subprojects 不存在
+          make LIBRARIES=Cephei
 
-          # 复制静态库到 lib 目录供主项目链接
-          mkdir -p lib
+          mkdir -p ../lib
           cp .theos/obj/debug/arm64/libCephei.a ../lib/ || true
           cp .theos/obj/debug/arm64/libCepheiSpringBoard.a ../lib/ || true
 
