@@ -13,7 +13,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout source code
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           submodules: true
@@ -22,56 +22,50 @@ jobs:
         run: |
           brew install dpkg ldid git gh
 
-      - name: Setup Theos environment
+      - name: Setup Theos environment (官方方式)
         run: |
-          echo "Cleaning existing theos folder..."
-          rm -rf "$GITHUB_WORKSPACE/theos"
-          mkdir -p "$GITHUB_WORKSPACE/theos"
+          rm -rf theos
+          git clone --depth=1 https://github.com/theos/theos.git theos
+          git clone --depth=1 https://github.com/theos/sdks.git theos/sdks
+          echo "THEOS=$PWD/theos" >> $GITHUB_ENV
 
-          echo "Cloning Theos core..."
-          git clone --depth=1 https://github.com/theos/theos.git "$GITHUB_WORKSPACE/theos"
-
-          echo "Cloning Theos SDKs..."
-          git clone --depth=1 https://github.com/theos/sdks.git "$GITHUB_WORKSPACE/theos/sdks"
-
-          echo "Exporting THEOS environment variable..."
-          echo "THEOS=$GITHUB_WORKSPACE/theos" >> $GITHUB_ENV
-
-      - name: Clone Cephei fork (避免 MobileIcons 报错)
+      - name: Clone Cephei repo
         run: |
-          rm -rf "$GITHUB_WORKSPACE/Cephei"
-          git clone --depth=1 https://github.com/opa334/Cephei.git "$GITHUB_WORKSPACE/Cephei"
+          rm -rf Cephei
+          git clone --depth=1 https://github.com/opa334/Cephei.git Cephei
 
-      - name: Build Cephei (只编译 libCephei)
+      - name: Build Cephei static libraries only
         run: |
-          cd "$GITHUB_WORKSPACE/Cephei"
+          cd Cephei
           make clean
-          make LIBRARIES=Cephei
+          make LIBRARIES=CepheiPrefs
 
-          mkdir -p "$GITHUB_WORKSPACE/lib"
-          cp .theos/obj/debug/arm64/libCephei.a "$GITHUB_WORKSPACE/lib/" || echo "⚠️ 未找到 libCephei.a"
+          # 复制静态库到 lib 目录供主项目链接
+          mkdir -p lib
+          cp .theos/obj/debug/arm64/libCepheiPrefs.a lib/ || true
+          cp .theos/obj/debug/arm64/libCephei.a lib/ || true
+          cp .theos/obj/debug/arm64/libCepheiSpringBoard.a lib/ || true
 
-      - name: 清理旧包
-        run: rm -f "$GITHUB_WORKSPACE/packages/"*.deb || true
+      - name: Clean previous packages
+        run: rm -f ${{ github.workspace }}/packages/*.deb
 
-      - name: 构建 tweak 插件
+      - name: Build tweak and bundle packages
         run: |
           make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
 
-      - name: 显示构建结果
-        run: ls -lh "$GITHUB_WORKSPACE/packages"
+      - name: List generated DEBs
+        run: ls -lh ${{ github.workspace }}/packages
 
-      - name: 发布 GitHub Release（仅 push 自动触发时）
+      - name: Create GitHub Release
         if: github.event_name == 'push'
-        env:
-          GH_TOKEN: ${{ secrets.PAT }}
         run: |
           VERSION=$(date +v%Y%m%d%H%M)
-          echo "发布版本 $VERSION"
-          gh release create "$VERSION" "$GITHUB_WORKSPACE/packages/"*.deb --title "calculatorhistory $VERSION" --notes "自动构建 .deb 安装包"
+          gh release create $VERSION ${{ github.workspace }}/packages/*.deb --title "calculatorhistory $VERSION" --notes "自动构建 .deb 安装包"
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
 
-      - name: 上传 .deb 构建产物到 GitHub Artifacts
+      - name: Upload DEB to workflow artifacts
         uses: actions/upload-artifact@v4
         with:
           name: calculatorhistory
-          path: "$GITHUB_WORKSPACE/packages/"*.deb
+          path: ${{ github.workspace }}/packages/*.deb
