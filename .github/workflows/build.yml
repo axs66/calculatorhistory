@@ -32,8 +32,9 @@ jobs:
           rm -rf theos/sdks   # 再删一次，确保 sdks 是空的
           git clone --depth=1 https://github.com/theos/sdks.git theos/sdks
           echo "THEOS=$PWD/theos" >> $GITHUB_ENV
+          ./theos/bin/update-theos   # <== 你要添加的这一行
 
-      - name: Clone Cephei repo
+      - name: Clone Cephei repo  (官方公开库)
         run: |
           rm -rf Cephei
           git clone --depth=1 https://github.com/hbang/libcephei.git Cephei
