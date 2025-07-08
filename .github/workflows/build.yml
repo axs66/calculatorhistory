@@ -35,14 +35,10 @@ jobs:
           export THEOS="$PWD/theos"
           ./theos/bin/update-theos
 
-      - name: Build Cephei static libraries only
+      - name: Clone Cephei repo (官方公开库)
         run: |
-          cd Cephei
-          make clean
-          make LIBRARIES=CepheiPrefs
-
-          mkdir -p lib
-          cp .theos/obj/debug/arm64/libCepheiPrefs.a lib/ || true
+          rm -rf Cephei
+          git clone --depth=1 https://github.com/hbang/libcephei.git Cephei
           
       - name: Build Cephei static libraries only
         run: |
