@@ -20,50 +20,63 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew install dpkg ldid git
+          brew install dpkg ldid git gh
 
-      - name: Setup Theos
+      - name: Debug workspace before setup
         run: |
-          rm -rf theos || true
-          rm -rf theos/sdks || true
-          mkdir -p theos
-          git clone --depth=1 https://github.com/theos/theos.git theos
-          git clone --depth=1 https://github.com/theos/sdks.git theos/sdks
-          echo "THEOS=$PWD/theos" >> $GITHUB_ENV
+          echo "Workspace: $GITHUB_WORKSPACE"
+          ls -lha "$GITHUB_WORKSPACE"
+
+      - name: Setup Theos environment
+        run: |
+          echo "Cleaning old theos folder"
+          rm -rf "$GITHUB_WORKSPACE/theos"
+          mkdir -p "$GITHUB_WORKSPACE/theos"
+          echo "Cloning theos core"
+          git clone --depth=1 https://github.com/theos/theos.git "$GITHUB_WORKSPACE/theos"
+          echo "Cloning theos SDKs"
+          git clone --depth=1 https://github.com/theos/sdks.git "$GITHUB_WORKSPACE/theos/sdks"
+          echo "THEOS=$GITHUB_WORKSPACE/theos" >> $GITHUB_ENV
+          ls -lha "$GITHUB_WORKSPACE/theos"
 
       - name: Clone Cephei fork (no MobileIcons)
         run: |
-          git clone --depth=1 https://github.com/opa334/Cephei.git Cephei
+          rm -rf "$GITHUB_WORKSPACE/Cephei"
+          git clone --depth=1 https://github.com/opa334/Cephei.git "$GITHUB_WORKSPACE/Cephei"
+          ls -lha "$GITHUB_WORKSPACE/Cephei"
 
       - name: Build Cephei (only libCephei)
         run: |
-          cd Cephei
+          cd "$GITHUB_WORKSPACE/Cephei"
           make clean
           make LIBRARIES=Cephei
 
-          mkdir -p ../lib
-          cp .theos/obj/debug/arm64/libCephei.a ../lib/
+          mkdir -p "$GITHUB_WORKSPACE/lib"
+          cp .theos/obj/debug/arm64/libCephei.a "$GITHUB_WORKSPACE/lib/" || echo "Warning: libCephei.a not found"
 
       - name: Clean previous packages
-        run: rm -f ./packages/*.deb || true
+        run: |
+          rm -f "$GITHUB_WORKSPACE/packages/"*.deb || true
 
       - name: Build tweak and bundle packages
         run: |
+          cd "$GITHUB_WORKSPACE"
           make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
 
       - name: List generated DEBs
-        run: ls -lh ./packages
+        run: ls -lh "$GITHUB_WORKSPACE/packages"
 
       - name: Create GitHub Release
         if: github.event_name == 'push'
-        run: |
-          VERSION=$(date +v%Y%m%d%H%M)
-          gh release create "$VERSION" ./packages/*.deb --title "calculatorhistory $VERSION" --notes "自动构建 .deb 安装包"
         env:
           GH_TOKEN: ${{ secrets.PAT }}
+        run: |
+          VERSION=$(date +v%Y%m%d%H%M)
+          echo "Creating release $VERSION"
+          gh release create "$VERSION" "$GITHUB_WORKSPACE/packages/"*.deb --title "calculatorhistory $VERSION" --notes "自动构建 .deb 安装包"
 
       - name: Upload DEB to workflow artifacts
         uses: actions/upload-artifact@v4
         with:
           name: calculatorhistory
-          path: ./packages/*.deb
+          path: "$GITHUB_WORKSPACE/packages/"*.deb
