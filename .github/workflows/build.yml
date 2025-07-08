@@ -10,52 +10,52 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-14
 
     steps:
-      - name: Checkout code
+      - name: Checkout source code
         uses: actions/checkout@v3
         with:
           submodules: true
 
-      - name: Setup Theos environment
-        uses: axs66/theos-action@main
-
-      - name: Clone Cephei repo (fix https)
+      - name: Install dependencies
         run: |
-          rm -rf Cephei
-          git config --global url."https://github.com/".insteadOf git@github.com:
-          git config --global url."https://".insteadOf git://
-          rm -rf Cephei
+          brew install dpkg ldid make clang git
+
+      - name: Setup Theos
+        run: |
+          git clone --depth=1 https://github.com/theos/theos.git theos
+          git clone --depth=1 https://github.com/theos/sdks.git theos/sdks
+          echo "THEOS=$PWD/theos" >> $GITHUB_ENV
+
+      - name: Clone Cephei fork (no MobileIcons)
+        run: |
           git clone --depth=1 https://github.com/opa334/Cephei.git Cephei
 
-      - name: Build Cephei static libraries only
+      - name: Build Cephei (only libCephei)
         run: |
           cd Cephei
           make clean
-          make LIBRARIES=CepheiPrefs
+          make LIBRARIES=Cephei
 
-          # 复制静态库到 lib 目录供主项目链接
-          mkdir -p lib
-          cp .theos/obj/debug/arm64/libCepheiPrefs.a lib/ || true
-          cp .theos/obj/debug/arm64/libCephei.a lib/ || true
-          cp .theos/obj/debug/arm64/libCepheiSpringBoard.a lib/ || true
+          mkdir -p ../lib
+          cp .theos/obj/debug/arm64/libCephei.a ../lib/
 
       - name: Clean previous packages
-        run: rm -f ${{ github.workspace }}/packages/*.deb
+        run: rm -f ./packages/*.deb || true
 
       - name: Build tweak and bundle packages
         run: |
           make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
 
       - name: List generated DEBs
-        run: ls -lh ${{ github.workspace }}/packages
+        run: ls -lh ./packages
 
       - name: Create GitHub Release
         if: github.event_name == 'push'
         run: |
           VERSION=$(date +v%Y%m%d%H%M)
-          gh release create $VERSION ${{ github.workspace }}/packages/*.deb --title "calculatorhistory $VERSION" --notes "自动构建 .deb 安装包"
+          gh release create "$VERSION" ./packages/*.deb --title "calculatorhistory $VERSION" --notes "自动构建 .deb 安装包"
         env:
           GH_TOKEN: ${{ secrets.PAT }}
 
@@ -63,4 +63,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: calculatorhistory
-          path: ${{ github.workspace }}/packages/*.deb
+          path: ./packages/*.deb
