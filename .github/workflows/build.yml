@@ -45,12 +45,12 @@ jobs:
         run: |
           cd Cephei
           make clean
-          make LIBRARIES=Cephei   # ✅ 关键修改：只构建 Cephei，不包含 CepheiPrefs
+          make -C subprojects/libcephei
 
           # 复制静态库到 lib 目录供主项目链接
           mkdir -p lib
-          cp .theos/obj/debug/arm64/libCephei.a lib/ || true
-          cp .theos/obj/debug/arm64/libCepheiSpringBoard.a lib/ || true
+          cp subprojects/libcephei/.theos/obj/debug/arm64/libCephei.a ../lib/ || true
+          cp subprojects/libcephei/.theos/obj/debug/arm64/libCepheiSpringBoard.a ../lib/ || true
 
       - name: Clean previous packages
         run: rm -f ${{ github.workspace }}/packages/*.deb
