@@ -13,10 +13,11 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout code without credentials
         uses: actions/checkout@v3
         with:
           submodules: true
+          persist-credentials: false
 
       - name: Install dependencies
         run: |
@@ -38,7 +39,7 @@ jobs:
       - name: Clone Cephei repo (官方公开库)
         run: |
           rm -rf Cephei          
-          GIT_TERMINAL_PROMPT=0 git clone --depth=1 https://github.com/opa334/Cephei.git Cephei
+          git clone --depth=1 https://github.com/opa334/Cephei.git Cephei
           
       - name: Build Cephei static libraries only
         run: |
