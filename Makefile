@@ -9,5 +9,7 @@ TWEAK_NAME = CalculatorHistory
 
 CalculatorHistory_FILES = Tweak.x $(shell find . \( -path "*/.theos/*" \) -prune -o -name "*.m" -print)
 CalculatorHistory_CFLAGS = -fobjc-arc
+CalculatorHistory_LDFLAGS += -L$(PWD)/lib
+
 
 include $(THEOS_MAKE_PATH)/tweak.mk
