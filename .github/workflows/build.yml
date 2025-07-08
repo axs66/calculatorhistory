@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          brew install dpkg ldid make clang git
+          brew install dpkg ldid git
 
       - name: Setup Theos
         run: |
