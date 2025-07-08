@@ -24,6 +24,7 @@ jobs:
 
       - name: Setup Theos
         run: |
+          rm -rf theos
           git clone --depth=1 https://github.com/theos/theos.git theos
           git clone --depth=1 https://github.com/theos/sdks.git theos/sdks
           echo "THEOS=$PWD/theos" >> $GITHUB_ENV
