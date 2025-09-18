@@ -7,9 +7,17 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = CalculatorHistory
 
-CalculatorHistory_FILES = Tweak.x $(shell find . \( -path "*/.theos/*" \) -prune -o -name "*.m" -print)
+# 明确列出需要编译的源文件，排除不存在的 Orion 文件
+CalculatorHistory_FILES = Tweak.x \
+    Extensions/UIFont+Rounded.m \
+    Extensions/UIImage+CalculatorHistory.m \
+    Extensions/CalculatorHistoryRecord.m \
+    Extensions/CalculatorHistoryRecordCell.m \
+    Extensions/CalculatorHistoryRecordManager.m \
+    Extensions/CalculatorHistoryViewController.m \
+    Utils.m
+
 CalculatorHistory_CFLAGS = -fobjc-arc
 CalculatorHistory_LDFLAGS += -L$(PWD)/lib
-
 
 include $(THEOS_MAKE_PATH)/tweak.mk
