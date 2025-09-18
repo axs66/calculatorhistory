@@ -1,11 +1,14 @@
 name: CI
 
+# 仅当 build.yml 文件发生变化时触发工作流
 on:
   push:
-    branches: [ main ]
     paths:
-      - '.github/workflows/build.yml'
-      - 'control'
+      - '.github/workflows/build.yml'  # 监控 build.yml 文件的变化
+      - 'Tweak.x'  # 增加对 Tweak.xm 文件的监控
+      - 'control' 
+    branches:
+      - 'main'  # 仅在推送到 main 分支时触发
   workflow_dispatch:
 
 jobs:
@@ -13,66 +16,34 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout code with credentials
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           submodules: true
-          persist-credentials: true  # 保持默认，确保能用 PAT
 
-      - name: Install dependencies
-        run: |
-          brew install dpkg ldid git gh
-
-      - name: Setup Theos environment (官方方式)
-        run: |
-          sudo rm -rf theos || true
-          sudo rm -rf theos/sdks || true
-          sleep 1
-          mkdir -p theos
-          git clone --depth=1 https://github.com/theos/theos.git theos
-          rm -rf theos/sdks
-          git clone --depth=1 https://github.com/theos/sdks.git theos/sdks
-          echo "THEOS=$PWD/theos" >> $GITHUB_ENV
-          export THEOS="$PWD/theos"
-          ./theos/bin/update-theos
-
-      - name: Clone Cephei repo (私有需认证)
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
-        run: |
-          rm -rf Cephei
-          git clone --depth=1 https://${GITHUB_TOKEN}@github.com/opa334/Cephei.git Cephei
-
-      - name: Build Cephei static libraries only
-        run: |
-          cd Cephei
-          make clean
-          make LIBRARIES=Cephei
-
-          mkdir -p ../lib
-          cp .theos/obj/debug/arm64/libCephei.a ../lib/ || true
-          cp .theos/obj/debug/arm64/libCepheiSpringBoard.a ../lib/ || true
+      - name: Use Theos Setup Action
+        uses: axs66/theos-action@main
 
       - name: Clean previous packages
         run: rm -f ${{ github.workspace }}/packages/*.deb
 
-      - name: Build tweak and bundle packages
+      - name: Build DEB (rootless + roothide)
         run: |
           make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+          make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide
 
       - name: List generated DEBs
         run: ls -lh ${{ github.workspace }}/packages
 
       - name: Create GitHub Release
-        if: github.event_name == 'push'
         run: |
           VERSION=$(date +v%Y%m%d%H%M)
-          gh release create $VERSION ${{ github.workspace }}/packages/*.deb --title "calculatorhistory $VERSION" --notes "自动构建 .deb 安装包"
+          gh release create $VERSION ${{ github.workspace }}/packages/*.deb --title "计算式历史记录 $VERSION" --notes "自动构建 .deb 安装包"
         env:
           GH_TOKEN: ${{ secrets.PAT }}
 
       - name: Upload DEB to workflow artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.3.3
         with:
-          name: calculatorhistory
+          name: 计算式历史记录
           path: ${{ github.workspace }}/packages/*.deb
